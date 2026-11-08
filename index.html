@@ -1,0 +1,1440 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>บันทึกการซ้อม</title>
+<meta name="description" content="จับเวลาซ้อม หยุดแล้วบันทึกว่าซ้อมอะไร แล้วดูกราฟ 7 วันล่าสุดเทียบเป้าหมายรายวัน">
+<meta name="theme-color" content="#dfe9ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1a21" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23dfe9ef'/%3E%3Cpath%20d='M12%2024V8l9-2.5v5.3l-6%201.7V24a4%204%201%201%201-3-3.9z'%20fill='%233f6f8d'/%3E%3C/svg%3E">
+<meta property="og:title" content="บันทึกการซ้อม">
+<meta property="og:description" content="จับเวลาซ้อม หยุดแล้วบันทึกว่าซ้อมอะไร แล้วดูกราฟ 7 วันล่าสุดเทียบเป้าหมายรายวัน">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="th_TH">
+<style>
+/* ---------- โทเคนสี (ธีมสว่าง) ---------- */
+:root{
+  --bg:#dfe9ef; --surface:#ffffff; --surface-2:#f3f8fa;
+  --line:#c6d6e0; --line-strong:#b5c8d4;
+  --text:#17252f; --text-soft:#33454f; --muted:#5f7584;
+  --action:#c4421f; --action-ink:#ffffff; --action-soft:#fdece7;
+  --blue:#3f6f8d; --blue-soft:#e3eef5;
+  --brass:#9a6a1f;
+  --good:#2e7d59; --warn:#9a6a1f; --bad:#b3261e;
+}
+/* ---------- โทเคนสี (ธีมมืด) ---------- */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0f1a21; --surface:#172630; --surface-2:#1c2f3b;
+    --line:#2c4150; --line-strong:#3a5263;
+    --text:#e6eef3; --text-soft:#c3d3dc; --muted:#8ea3b1;
+    --action:#f07a5a; --action-ink:#1b0e09; --action-soft:#3a221b;
+    --blue:#8cb8d3; --blue-soft:#1d3442;
+    --brass:#d9a94f;
+    --good:#7fd1a6; --warn:#e3b04b; --bad:#ff8a80;
+  }
+}
+/* ---------- พื้นฐาน ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:"Sarabun","Leelawadee UI","Noto Sans Thai",Thonburi,Tahoma,system-ui,sans-serif;
+  font-size:16px;line-height:1.6;overflow-x:hidden;
+}
+button,input,textarea{font-family:inherit}
+button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+input,textarea{touch-action:manipulation}
+button:active{transform:scale(.98)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.hidden{display:none!important}
+.sr-only{
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+/* ---------- โครงหน้า ---------- */
+.app{
+  max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px;
+  padding-top:16px;padding-bottom:calc(24px + env(safe-area-inset-bottom));
+  padding-left:max(16px,env(safe-area-inset-left));
+  padding-right:max(16px,env(safe-area-inset-right));
+}
+header{display:block}
+h1{
+  font-size:28px;line-height:1.4;font-weight:700;margin:0;
+  text-wrap:balance;
+}
+h2{text-wrap:balance}
+.staff{
+  height:21px;
+  background:repeating-linear-gradient(to bottom,var(--line-strong) 0 1px,transparent 1px 5px);
+}
+header .staff{margin-top:10px}
+.storage-note{
+  margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);
+  border-radius:12px;background:var(--surface-2);color:var(--text-soft);
+  font-size:14.4px;font-weight:600;line-height:1.5;
+}
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:18px;padding:16px;min-width:0;
+}
+.card > .staff{margin:-16px -16px 14px;border-radius:18px 18px 0 0}
+.card h2{font-size:18px;line-height:1.5;font-weight:700;margin:0}
+/* ---------- ปุ่ม ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:44px;min-width:44px;padding:8px 14px;
+  border:1px solid transparent;border-radius:12px;
+  font-size:16px;font-weight:700;line-height:1.35;
+  cursor:pointer;transition:transform .12s;
+}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:disabled:active{transform:none}
+.primary{background:var(--action);color:var(--action-ink);border-color:var(--action)}
+.secondary{background:var(--surface-2);color:var(--text);border-color:var(--line);font-weight:600}
+.btn-lg{min-height:56px;font-size:18px}
+.btn-block{width:100%}
+.btn.is-armed{border-color:var(--bad);color:var(--bad);background:var(--surface-2)}
+/* ---------- การ์ดจับเวลา ---------- */
+.timer-card{padding:24px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.clock{
+  font-size:64px;line-height:1.15;font-weight:700;text-align:center;
+  font-variant-numeric:tabular-nums;color:var(--text);
+  white-space:nowrap;
+}
+.timer-status{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin:0;min-height:22px;font-size:14.4px;line-height:1.5;color:var(--muted);
+}
+.run-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--action);
+  flex:0 0 auto;display:none;
+}
+.timer-card.is-running .run-dot{display:inline-block}
+.timer-actions{display:flex;gap:12px;margin-top:6px}
+.timer-actions .btn{flex:1 1 0;min-width:0;min-height:56px;font-size:18px}
+.restore{
+  display:flex;flex-direction:column;gap:8px;padding:12px;
+  border:1px solid var(--line);border-radius:12px;background:var(--blue-soft);
+}
+.restore p{margin:0;font-size:14.4px;line-height:1.5;color:var(--text);font-weight:600}
+.restore .restore-warn{color:var(--bad)}
+.restore-actions{display:flex;gap:8px;flex-wrap:wrap}
+.restore-actions .btn{flex:1 1 160px;min-height:52px;font-size:16px}
+/* ---------- แผ่นบันทึก ---------- */
+.sheet h2{font-size:22px;line-height:1.5;margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{
+  min-height:44px;max-width:100%;padding:8px 14px;
+  border:1px solid var(--line);border-radius:999px;
+  background:var(--surface-2);color:var(--text);
+  font-size:14.4px;font-weight:600;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;touch-action:manipulation;
+}
+.field-label{
+  display:block;margin:12px 0 4px;font-size:14.4px;line-height:1.5;
+  font-weight:600;color:var(--text-soft);
+}
+input[type="text"],textarea,input[type="number"]{
+  width:100%;min-height:44px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:12px;
+  background:var(--surface-2);color:var(--text);
+  font-size:16px;line-height:1.5;
+}
+textarea{min-height:64px;resize:vertical}
+input[type="number"]{appearance:textfield;-moz-appearance:textfield}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{appearance:none;margin:0}
+.hint{margin:6px 0 0;min-height:20px;font-size:12.8px;line-height:1.5;color:var(--muted)}
+.short-warn{margin:10px 0 0;font-size:14.4px;line-height:1.5;font-weight:600;color:var(--warn)}
+.sheet-actions{display:flex;gap:12px;margin-top:14px}
+.sheet-actions .btn{flex:1 1 0;min-width:0;min-height:52px;padding:8px 10px}
+.sheet-actions .primary{flex:1.3 1 0}
+/* ---------- กราฟสัปดาห์ ---------- */
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.today-prog{
+  margin:0;font-size:14.4px;line-height:1.5;font-weight:700;
+  color:var(--text-soft);font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.progress{
+  height:6px;margin:8px 0 2px;border-radius:999px;
+  background:var(--surface-2);overflow:hidden;
+}
+.progress-fill{display:block;height:100%;width:0;border-radius:999px;background:var(--action)}
+.progress-fill.met{background:var(--good)}
+.chart{margin-top:10px;position:relative}
+.plot{position:relative;height:156px}
+.chart-cols{position:absolute;inset:0;display:flex;gap:6px;align-items:flex-end;z-index:1}
+.col{flex:1 1 0;min-width:0;height:100%;position:relative}
+.bar{
+  position:absolute;left:50%;bottom:0;width:min(26px,64%);transform:translateX(-50%);
+  background:var(--blue);border-radius:4px 4px 0 0;height:0;
+  transition:height .2s;
+}
+.bar.is-today{background:var(--action)}
+.bar-dot{
+  position:absolute;left:50%;bottom:4px;width:5px;height:5px;margin-left:-2.5px;
+  border-radius:50%;background:var(--line-strong);
+}
+.bar-dot.is-today{background:var(--action)}
+.col-val{
+  position:absolute;left:-8px;right:-8px;text-align:center;
+  font-size:12.8px;line-height:1.3;font-weight:600;color:var(--muted);
+  font-variant-numeric:tabular-nums;z-index:3;
+}
+.col-chk{
+  position:absolute;left:0;right:0;text-align:center;
+  font-size:12.8px;line-height:1.3;font-weight:700;color:var(--good);z-index:3;
+}
+.goal-line{
+  position:absolute;left:0;right:0;height:0;
+  border-top:1px dashed var(--line-strong);z-index:2;
+}
+.goal-label{
+  position:absolute;right:0;z-index:4;
+  padding:0 0 0 6px;background:var(--surface);
+  font-size:12.8px;line-height:1.4;font-weight:600;color:var(--muted);
+  white-space:nowrap;
+}
+.dows{display:flex;gap:6px;margin-top:6px}
+.dow{
+  flex:1 1 0;min-width:0;text-align:center;
+  font-size:12.8px;line-height:1.5;font-weight:600;color:var(--muted);
+}
+.dow.is-today{color:var(--text);font-weight:700}
+.week-summary{
+  margin:10px 0 0;font-size:14.4px;line-height:1.5;font-weight:600;
+  color:var(--text-soft);
+}
+/* ---------- รายการบันทึก ---------- */
+.empty{margin:12px 0 0;font-size:16px;line-height:1.6;color:var(--text-soft)}
+.log-day{
+  margin:14px 0 2px;font-size:14.4px;line-height:1.5;
+  font-weight:700;color:var(--text-soft);
+}
+#logList > .log-day:first-child{margin-top:12px}
+.entry{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:10px 0;border-bottom:1px solid var(--line);
+}
+.entries:last-child .entry:last-child{border-bottom:0;padding-bottom:2px}
+.entry-main{flex:1 1 auto;min-width:0}
+.entry-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.entry-dur{
+  font-size:16px;line-height:1.5;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.entry-label{font-size:16px;line-height:1.5;overflow-wrap:anywhere;min-width:0}
+.entry-time{
+  font-size:12.8px;line-height:1.5;color:var(--muted);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.entry-note{
+  margin:2px 0 0;font-size:14.4px;line-height:1.5;
+  color:var(--muted);overflow-wrap:anywhere;white-space:pre-wrap;
+}
+.del{
+  flex:0 0 auto;min-height:44px;min-width:44px;padding:6px 10px;
+  font-size:14.4px;font-weight:600;
+}
+/* ---------- ตั้งค่าและข้อมูล ---------- */
+details.settings{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:18px;padding:0;
+}
+summary{
+  list-style:none;cursor:pointer;min-height:56px;
+  display:flex;align-items:center;gap:8px;
+  padding:4px 16px;font-size:18px;font-weight:700;
+  touch-action:manipulation;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"▾";margin-left:auto;color:var(--muted);font-size:14.4px}
+details[open] summary::after{content:"▴"}
+.settings-body{padding:4px 16px 16px;border-top:1px solid var(--line)}
+.setblock{padding:12px 0;border-top:1px solid var(--line)}
+.setblock:first-child{border-top:0;padding-top:4px}
+.setblock:last-of-type{border-top:0}
+.setlabel{display:block;margin:0 0 8px;font-size:16px;line-height:1.5;font-weight:600}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper input{width:104px;min-height:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.stepper .btn{width:48px;min-width:48px;min-height:48px;padding:0;font-size:22px;font-weight:700}
+.switchrow{
+  display:flex;align-items:center;gap:12px;min-height:48px;
+  cursor:pointer;font-size:16px;font-weight:600;line-height:1.5;
+}
+.switchwrap{position:relative;flex:0 0 auto;width:52px;height:44px}
+.switchwrap input{
+  position:absolute;inset:0;width:100%;height:100%;margin:0;
+  opacity:0;cursor:pointer;z-index:2;
+}
+.track{
+  position:absolute;left:0;top:6px;width:52px;height:32px;
+  border-radius:999px;background:var(--line);
+  transition:background-color .2s;
+}
+.thumb{
+  position:absolute;left:4px;top:10px;width:24px;height:24px;
+  border-radius:50%;background:var(--surface);
+  transition:transform .2s;
+}
+.switchwrap input:checked ~ .track{background:var(--blue)}
+.switchwrap input:checked ~ .thumb{transform:translateX(20px)}
+.switchwrap input:focus-visible ~ .track{outline:3px solid var(--blue);outline-offset:2px}
+.switchtext{flex:1 1 auto;min-width:0}
+.setbtns{display:flex;flex-direction:column;gap:8px}
+.setbtns .btn{width:100%;min-height:48px;font-size:16px}
+.copy-fallback{margin-top:8px}
+.copy-fallback textarea{
+  font-family:ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:12.8px;line-height:1.6;
+}
+.setnote{margin:8px 0 0;font-size:14.4px;line-height:1.5;color:var(--text-soft);min-height:0}
+.importarea{
+  font-family:ui-monospace,"Cascadia Mono",Menlo,Consolas,monospace;
+  font-size:12.8px;line-height:1.6;min-height:84px;
+}
+.privacy{
+  margin:8px 0 0;padding-top:12px;border-top:1px solid var(--line);
+  font-size:12.8px;line-height:1.7;color:var(--muted);
+}
+/* ---------- ประกาศลอยและท้ายหน้า ---------- */
+.toast{
+  position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));
+  transform:translate(-50%,10px);z-index:20;
+  max-width:calc(100vw - 32px);padding:10px 18px;border-radius:999px;
+  background:var(--text);color:var(--surface);
+  font-size:14.4px;line-height:1.5;font-weight:700;text-align:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+footer{margin:2px 0 0;text-align:center;font-size:14.4px;line-height:1.6;color:var(--text-soft)}
+footer p{margin:0}
+/* ---------- จอแคบ ---------- */
+@media (max-width:380px){
+  .chart-cols,.dows{gap:3px}
+  .sheet-actions{flex-direction:column}
+  .sheet-actions .primary{flex:1 1 auto}
+  .timer-actions .btn{font-size:16px;padding:8px 8px}
+}
+@media (max-width:340px){
+  .clock{font-size:56px}
+}
+/* ---------- จอกว้าง: กราฟกับบันทึกวางคู่กัน ---------- */
+@media (min-width:721px){
+  .app{
+    max-width:900px;display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;align-items:start;
+  }
+  header,.timer-card,.sheet,details.settings,footer{grid-column:1 / -1}
+  .week-card{grid-column:1}
+  .log-card{grid-column:2}
+}
+/* ---------- ลดการเคลื่อนไหว ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>บันทึกการซ้อม</h1>
+    <div class="staff" aria-hidden="true"></div>
+    <p class="storage-note hidden" id="storageNote" role="note">เบราว์เซอร์นี้เก็บบันทึกไม่ได้ ข้อมูลจะหายเมื่อปิดหน้านี้</p>
+  </header>
+
+  <!-- การ์ดจับเวลา: ตัวเลขคือพระเอกของการ์ด -->
+  <section class="card timer-card" id="timerCard" aria-label="ตัวจับเวลา">
+    <div class="restore hidden" id="restoreNote">
+      <p id="restoreText" aria-live="polite"></p>
+      <p class="restore-warn hidden" id="restoreCap">เวลานานผิดปกติ ตัดที่ 12 ชั่วโมง</p>
+      <div class="restore-actions">
+        <button type="button" class="btn secondary" id="btnRestoreKeep">ซ้อมต่อจากเดิม</button>
+        <button type="button" class="btn primary" id="btnRestoreStop">หยุดและบันทึกตอนนี้</button>
+      </div>
+    </div>
+    <div class="clock" id="clock">00:00</div>
+    <p class="timer-status" id="timerStatus" aria-live="polite">
+      <span class="run-dot" aria-hidden="true"></span><span id="statusText">พร้อมเริ่มซ้อม</span>
+    </p>
+    <div class="timer-actions" id="timerActions">
+      <button type="button" class="btn primary btn-lg btn-block" id="btnStart">เริ่มซ้อม</button>
+      <button type="button" class="btn secondary hidden" id="btnPause">พัก</button>
+      <button type="button" class="btn secondary hidden" id="btnResume">ซ้อมต่อ</button>
+      <button type="button" class="btn primary hidden" id="btnStop">หยุดและบันทึก</button>
+    </div>
+  </section>
+
+  <!-- แผ่นบันทึก: ปรากฏใต้การ์ดจับเวลาหลังกดหยุด -->
+  <section class="card sheet hidden" id="saveSheet" aria-labelledby="saveHeading">
+    <h2 id="saveHeading">ซ้อมอะไรอยู่?</h2>
+    <div class="chips" id="chips" role="group" aria-label="ซ้อมอะไรอยู่?"></div>
+    <input type="text" id="labelInput" maxlength="60" placeholder="เช่น สเกลเมเจอร์ 2 อ็อกเทฟ" autocomplete="off" enterkeyhint="done" aria-label="ซ้อมอะไร">
+    <p class="hint" id="labelHint">เลือกหรือพิมพ์ว่าซ้อมอะไร</p>
+    <label class="field-label" for="noteInput">โน้ตสั้น ๆ (ไม่บังคับ)</label>
+    <textarea id="noteInput" maxlength="200" rows="2"></textarea>
+    <p class="short-warn hidden" id="shortWarn">ซ้อมไม่ถึง 1 นาที จะบันทึกก็ได้</p>
+    <div class="sheet-actions">
+      <button type="button" class="btn primary" id="btnSave" disabled>บันทึก</button>
+      <button type="button" class="btn secondary" id="btnDiscard">ไม่บันทึก</button>
+    </div>
+  </section>
+
+  <!-- กราฟ 7 วัน: เส้นไม้เทียบเสียงคือลายเซ็นของการ์ดนี้ -->
+  <section class="card week-card" id="weekCard" aria-labelledby="weekTitle">
+    <div class="staff" aria-hidden="true"></div>
+    <div class="card-head">
+      <h2 id="weekTitle">7 วันล่าสุด</h2>
+      <p class="today-prog" id="todayProg">วันนี้ 0/30 นาที</p>
+    </div>
+    <div class="progress" aria-hidden="true"><i class="progress-fill" id="progressFill"></i></div>
+    <div class="chart" aria-hidden="true">
+      <div class="plot" id="plot">
+        <div class="goal-line" id="goalLine"></div>
+        <div class="goal-label" id="goalLabel">เป้า 30 นาที</div>
+        <div class="chart-cols" id="chartCols"></div>
+      </div>
+      <div class="dows" id="chartDows"></div>
+    </div>
+    <p class="week-summary" id="weekSummary">รวม 0 นาที · ซ้อมติดกัน 0 วัน</p>
+    <table class="sr-only" id="weekTable"><tbody></tbody></table>
+  </section>
+
+  <!-- รายการบันทึก -->
+  <section class="card log-card" id="logCard" aria-labelledby="logTitle">
+    <div class="staff" aria-hidden="true"></div>
+    <h2 id="logTitle">บันทึกล่าสุด</h2>
+    <p class="empty" id="logEmpty">ยังไม่มีบันทึก กดเริ่มซ้อมเพื่อบันทึกครั้งแรก</p>
+    <div id="logList"></div>
+  </section>
+
+  <!-- ตั้งค่าและข้อมูล -->
+  <details class="card settings" id="settings">
+    <summary>ตั้งค่าและข้อมูล</summary>
+    <div class="settings-body">
+      <div class="setblock">
+        <span class="setlabel" id="goalLabelText">เป้าหมายต่อวัน (นาที)</span>
+        <div class="stepper">
+          <button type="button" class="btn secondary" id="btnGoalMinus" aria-label="ลดเป้าหมาย">−</button>
+          <input type="number" id="goalInput" min="5" max="300" step="5" value="30" inputmode="numeric" aria-labelledby="goalLabelText">
+          <button type="button" class="btn secondary" id="btnGoalPlus" aria-label="เพิ่มเป้าหมาย">+</button>
+        </div>
+      </div>
+
+      <div class="setblock" id="wakeRow">
+        <label class="switchrow" for="wakeInput">
+          <span class="switchwrap">
+            <input type="checkbox" id="wakeInput" role="switch">
+            <span class="track" aria-hidden="true"></span>
+            <span class="thumb" aria-hidden="true"></span>
+          </span>
+          <span class="switchtext">ไม่ให้หน้าจอดับตอนจับเวลา</span>
+        </label>
+      </div>
+
+      <div class="setblock">
+        <div class="setbtns">
+          <button type="button" class="btn secondary" id="btnCopySummary">คัดลอกสรุปสัปดาห์</button>
+          <button type="button" class="btn secondary" id="btnCopyBackup">คัดลอกข้อมูลสำรอง</button>
+        </div>
+        <div class="copy-fallback hidden" id="copyFallbackWrap">
+          <textarea id="copyFallback" class="copy-fallback-text" readonly rows="4" aria-label="ข้อความที่คัดลอก"></textarea>
+        </div>
+      </div>
+
+      <div class="setblock">
+        <label class="setlabel" for="importArea">วางข้อมูลสำรอง</label>
+        <textarea id="importArea" class="importarea" rows="3" spellcheck="false" aria-label="วางข้อมูลสำรอง"></textarea>
+        <div class="setbtns" style="margin-top:8px">
+          <button type="button" class="btn secondary" id="btnImport">นำเข้า</button>
+        </div>
+        <p class="setnote" id="importMsg" role="status"></p>
+      </div>
+
+      <div class="setblock">
+        <button type="button" class="btn secondary btn-block" id="btnClear">ล้างข้อมูลทั้งหมด</button>
+      </div>
+
+      <p class="privacy">ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ส่งไปที่อื่น เพื่อนที่เปิดลิงก์เดียวกันจะไม่เห็นบันทึกของคุณ</p>
+    </div>
+  </details>
+
+  <footer>
+    <p>บันทึกการซ้อม · สร้างด้วย AI ช่วย · วิชา 3500230</p>
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+(function(){
+/* ---------- ค่าคงที่ ---------- */
+var KEY_ENTRIES='practice-log-entries-v1';
+var KEY_TIMER='practice-log-timer-v1';
+var KEY_SETTINGS='practice-log-settings-v1';
+var PRESETS=['สเกล','อาร์เปจโจ','เพลงหลัก','อ่านโน้ต','ฝึกหู','เทคนิค'];
+var MAX_ENTRIES=500;
+var MAX_RESTORE_SECONDS=43200;
+var GOAL_MIN=5, GOAL_MAX=300;
+var DOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
+var MONTHS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var CHART_H=156, BAR_MAX=112;
+
+/* ---------- ยูทิลิตีสั้น ๆ ---------- */
+function $(id){return document.getElementById(id);}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function pad2(n){return (n<10?'0':'')+n;}
+function vis(node,on){if(node){node.classList.toggle('hidden',!on);}}
+function isNum(v){return typeof v==='number'&&isFinite(v);}
+function text(node,t){node.textContent=t;return node;}
+
+/* ---------- พื้นที่เก็บข้อมูล: localStorage พร้อมสำรองในหน่วยความจำ ---------- */
+var storage=(function(){
+  var ok=false;
+  try{
+    localStorage.setItem('practice-log-probe','1');
+    localStorage.removeItem('practice-log-probe');
+    ok=true;
+  }catch(e){ok=false;}
+  var mem={};
+  return {
+    ok:ok,
+    get:function(k){
+      /* พื้นที่เก็บใช้ได้: อ่านจาก localStorage จริงเสมอ เพื่อให้เห็นการลบจากแท็บอื่น */
+      if(ok){
+        try{return localStorage.getItem(k);}catch(e){}
+      }
+      return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null;
+    },
+    set:function(k,v){
+      mem[k]=v;
+      if(ok){try{localStorage.setItem(k,v);}catch(e){}}
+    },
+    remove:function(k){
+      delete mem[k];
+      if(ok){try{localStorage.removeItem(k);}catch(e){}}
+    }
+  };
+})();
+
+function readJSON(k,fallback){
+  var raw=storage.get(k);
+  if(raw===null||raw===undefined) return fallback;
+  try{
+    var v=JSON.parse(raw);
+    return (v===null||v===undefined)?fallback:v;
+  }catch(e){
+    return fallback;
+  }
+}
+
+/* ---------- ข้อมูลในหน่วยความจำ ---------- */
+var entries=[];
+var settings={goalMinutes:30,wakeLock:false};
+var state='idle';               /* idle | running | paused | saving */
+var startedAtMs=0;
+var accumulatedMs=0;
+var lastElapsedMs=0;
+var tickId=0;
+var toastTimer=0;
+var restorePending=false;
+
+/* ---------- วันที่และข้อความภาษาไทย (เขียนเอง ไม่พึ่ง Intl) ---------- */
+function dayKey(d){
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+function startOfDay(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function addDays(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
+function parseDate(v){
+  var d=new Date(v);
+  return isNaN(d.getTime())?null:d;
+}
+function thaiDate(d){
+  return DOW[d.getDay()]+'. '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+(d.getFullYear()+543);
+}
+function timeOfDay(d){return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function minutesOf(seconds){return Math.round(seconds/60);}
+function durationText(seconds){
+  var m=minutesOf(seconds);
+  if(m<1) return '< 1 นาที';
+  if(m>=60){
+    var h=Math.floor(m/60);
+    var r=m%60;
+    return h+' ชม. '+r+' นาที';
+  }
+  return m+' นาที';
+}
+
+/* ---------- ตัวจับเวลา: คำนวณจาก timestamp จริงเสมอ ---------- */
+function currentElapsed(){
+  var e=accumulatedMs;
+  if(state==='running'){
+    var delta=Date.now()-startedAtMs;
+    e+=(delta>0?delta:0);
+  }
+  if(e<lastElapsedMs) e=lastElapsedMs;
+  else lastElapsedMs=e;
+  return e;
+}
+function fmtClock(ms){
+  var s=Math.floor(Math.max(0,ms)/1000);
+  var h=Math.floor(s/3600);
+  var m=Math.floor((s%3600)/60);
+  var sec=s%60;
+  if(h>0) return h+':'+pad2(m)+':'+pad2(sec);
+  return pad2(m)+':'+pad2(sec);
+}
+function saveTimer(){
+  if(state==='idle'){storage.remove(KEY_TIMER);return;}
+  storage.set(KEY_TIMER,JSON.stringify({
+    state:state,
+    startedAtMs:Math.round(startedAtMs),
+    accumulatedMs:Math.round(accumulatedMs)
+  }));
+}
+function renderClockOnly(){
+  $('clock').textContent=fmtClock(currentElapsed());
+}
+function startTick(){
+  if(tickId) return;
+  tickId=setInterval(function(){
+    if(document.hidden) return;
+    if(state==='running') renderClockOnly();
+  },250);
+}
+function stopTick(){
+  if(tickId){clearInterval(tickId);tickId=0;}
+}
+function renderTimer(){
+  var elapsed=(state==='idle')?0:currentElapsed();
+  $('clock').textContent=fmtClock(elapsed);
+  var label='';
+  if(state==='idle') label='พร้อมเริ่มซ้อม';
+  else if(state==='running') label='กำลังซ้อมอยู่…';
+  else if(state==='paused') label='พักอยู่';
+  $('statusText').textContent=label;
+  vis($('timerStatus'),label!=='');
+  $('timerCard').classList.toggle('is-running',state==='running');
+  vis($('timerActions'),!restorePending);
+  vis($('btnStart'),state==='idle');
+  vis($('btnPause'),state==='running');
+  vis($('btnResume'),state==='paused');
+  vis($('btnStop'),state==='running'||state==='paused');
+}
+function startTimer(){
+  hideRestore();
+  stopTick();
+  state='running';
+  startedAtMs=Date.now();
+  accumulatedMs=0;
+  lastElapsedMs=0;
+  saveTimer();
+  startTick();
+  requestWake();
+  renderTimer();
+}
+function pauseTimer(){
+  if(state!=='running') return;
+  hideRestore();
+  accumulatedMs=currentElapsed();
+  startedAtMs=0;
+  state='paused';
+  saveTimer();
+  stopTick();
+  releaseWake();
+  renderTimer();
+}
+function resumeTimer(){
+  if(state!=='paused') return;
+  state='running';
+  startedAtMs=Date.now();
+  saveTimer();
+  startTick();
+  requestWake();
+  renderTimer();
+}
+function stopTimer(){
+  if(state!=='running'&&state!=='paused') return;
+  hideRestore();
+  accumulatedMs=(state==='running')?currentElapsed():accumulatedMs;
+  startedAtMs=0;
+  lastElapsedMs=accumulatedMs;
+  state='saving';
+  saveTimer();
+  stopTick();
+  releaseWake();
+  renderTimer();
+  openSheet();
+}
+function resetTimer(){
+  state='idle';
+  accumulatedMs=0;
+  startedAtMs=0;
+  lastElapsedMs=0;
+  stopTick();
+  releaseWake();
+  storage.remove(KEY_TIMER);
+  hideRestore();
+  hideSheet();
+  renderTimer();
+}
+
+/* ---------- แจ้งเตือนกู้เวลาที่ค้างอยู่ ---------- */
+function showRestore(stale){
+  $('restoreText').textContent='พบเวลาที่ค้างอยู่ ('+fmtClock(currentElapsed())+')';
+  vis($('restoreCap'),!!stale);
+  vis($('restoreNote'),true);
+  restorePending=true;
+  if(stale){
+    setTimeout(function(){
+      var b=$('btnRestoreStop');
+      try{b.focus({preventScroll:true});}catch(e){try{b.focus();}catch(e2){}}
+    },30);
+  }
+}
+function hideRestore(){
+  vis($('restoreNote'),false);
+  restorePending=false;
+}
+
+/* ---------- Wake Lock (ถ้าเบราว์เซอร์รองรับ) ---------- */
+var wakeSentinel=null;
+function wakeSupported(){
+  return !!(navigator.wakeLock&&typeof navigator.wakeLock.request==='function');
+}
+function requestWake(){
+  if(!settings.wakeLock||!wakeSupported()||state!=='running'||document.hidden) return;
+  if(wakeSentinel) return;
+  try{
+    navigator.wakeLock.request('screen').then(function(s){
+      wakeSentinel=s;
+      try{
+        s.addEventListener('release',function(){
+          if(wakeSentinel===s) wakeSentinel=null;
+        });
+      }catch(e){}
+    },function(){});
+  }catch(e){}
+}
+function releaseWake(){
+  if(wakeSentinel){
+    try{wakeSentinel.release();}catch(e){}
+    wakeSentinel=null;
+  }
+}
+
+/* ---------- แผ่นบันทึก ---------- */
+var discardTimer=0;
+function renderChips(){
+  var box=$('chips');
+  box.textContent='';
+  var seen=Object.create(null);
+  var list=[];
+  var i;
+  for(i=0;i<PRESETS.length;i++){
+    seen[PRESETS[i].toLowerCase()]=true;
+    list.push(PRESETS[i]);
+  }
+  var recent=0;
+  for(i=0;i<entries.length&&recent<5;i++){
+    var l=(entries[i].label||'').trim();
+    if(!l) continue;
+    var key=l.toLowerCase();
+    if(seen[key]) continue;
+    seen[key]=true;
+    list.push(l);
+    recent++;
+  }
+  for(i=0;i<list.length;i++){
+    (function(label){
+      var b=document.createElement('button');
+      b.type='button';
+      b.className='chip';
+      b.textContent=label;
+      b.title=label;
+      b.addEventListener('click',function(){
+        $('labelInput').value=label.slice(0,60);
+        updateSaveState();
+      });
+      box.appendChild(b);
+    })(list[i]);
+  }
+}
+function updateSaveState(){
+  var label=$('labelInput').value.trim();
+  var empty=(label.length===0);
+  $('btnSave').disabled=empty;
+  vis($('labelHint'),empty);
+}
+function openSheet(){
+  renderChips();
+  $('labelInput').value='';
+  $('noteInput').value='';
+  resetDiscard();
+  updateSaveState();
+  vis($('shortWarn'),currentElapsed()<60000);
+  vis($('saveSheet'),true);
+}
+function hideSheet(){
+  vis($('saveSheet'),false);
+  $('labelInput').value='';
+  $('noteInput').value='';
+  resetDiscard();
+}
+function makeId(){
+  var rnd='';
+  while(rnd.length<4){
+    rnd+=(Math.random().toString(36).slice(2)+'0000').slice(0,4-rnd.length);
+  }
+  return Date.now()+'-'+rnd.slice(0,4);
+}
+function saveEntry(){
+  var label=$('labelInput').value.trim();
+  if(!label) return;
+  var note=$('noteInput').value.trim();
+  var secs=Math.max(0,Math.round(currentElapsed()/1000));
+  entries.unshift({
+    id:makeId(),
+    endedAt:new Date().toISOString(),
+    seconds:secs,
+    label:label.slice(0,60),
+    note:note.slice(0,200)
+  });
+  if(entries.length>MAX_ENTRIES) entries=entries.slice(0,MAX_ENTRIES);
+  saveEntries();
+  resetTimer();
+  renderWeek();
+  renderLog();
+  toast('บันทึกแล้ว');
+}
+function resetDiscard(){
+  var b=$('btnDiscard');
+  clearTimeout(discardTimer);
+  discardTimer=0;
+  if(b){
+    b.setAttribute('data-armed','0');
+    b.textContent='ไม่บันทึก';
+    b.classList.remove('is-armed');
+  }
+}
+function armDiscard(){
+  var b=$('btnDiscard');
+  if(b.getAttribute('data-armed')==='1'){
+    resetDiscard();
+    resetTimer();
+    return;
+  }
+  b.setAttribute('data-armed','1');
+  b.textContent='แน่ใจนะ? กดอีกครั้ง';
+  b.classList.add('is-armed');
+  clearTimeout(discardTimer);
+  discardTimer=setTimeout(resetDiscard,4000);
+}
+
+/* ---------- ประกาศลอย ---------- */
+function toast(msg){
+  var t=$('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+/* ---------- สรุปสัปดาห์ ---------- */
+function weekData(){
+  var base=startOfDay(new Date());
+  var days=[];
+  var byKey=Object.create(null);
+  var i;
+  for(i=0;i<7;i++){
+    var d=addDays(base,i-6);
+    var day={date:d,key:dayKey(d),seconds:0,minutes:0};
+    days.push(day);
+    byKey[day.key]=day;
+  }
+  for(i=0;i<entries.length;i++){
+    var e=entries[i];
+    var ed=parseDate(e.endedAt);
+    if(!ed) continue;
+    var target=byKey[dayKey(ed)];
+    if(target) target.seconds+=e.seconds;
+  }
+  var total=0,maxM=0;
+  for(i=0;i<days.length;i++){
+    days[i].minutes=minutesOf(days[i].seconds);
+    total+=days[i].minutes;
+    if(days[i].minutes>maxM) maxM=days[i].minutes;
+  }
+  return {
+    days:days,
+    totalMinutes:total,
+    maxMinutes:maxM,
+    todayMinutes:days[6].minutes,
+    streak:computeStreak(base)
+  };
+}
+function computeStreak(base){
+  var byKey=Object.create(null);
+  var i;
+  for(i=0;i<entries.length;i++){
+    var e=entries[i];
+    var d=parseDate(e.endedAt);
+    if(!d) continue;
+    var k=dayKey(d);
+    byKey[k]=(byKey[k]||0)+e.seconds;
+  }
+  var d=startOfDay(base);
+  if((byKey[dayKey(d)]||0)<60) d=addDays(d,-1);
+  var n=0;
+  while((byKey[dayKey(d)]||0)>=60){
+    n++;
+    d=addDays(d,-1);
+    if(n>40000) break;
+  }
+  return n;
+}
+
+/* ---------- กราฟ ---------- */
+var chartCols=[];
+var chartDows=[];
+function buildChart(){
+  var cols=$('chartCols');
+  var dows=$('chartDows');
+  cols.textContent='';
+  dows.textContent='';
+  chartCols=[];
+  chartDows=[];
+  for(var i=0;i<7;i++){
+    var col=document.createElement('div');
+    col.className='col';
+    var val=document.createElement('span');
+    val.className='col-val';
+    var chk=document.createElement('span');
+    chk.className='col-chk';
+    chk.textContent='✓';
+    chk.setAttribute('aria-hidden','true');
+    var bar=document.createElement('div');
+    bar.className='bar';
+    var dot=document.createElement('span');
+    dot.className='bar-dot';
+    col.appendChild(val);
+    col.appendChild(chk);
+    col.appendChild(bar);
+    col.appendChild(dot);
+    cols.appendChild(col);
+    var dow=document.createElement('span');
+    dow.className='dow';
+    dows.appendChild(dow);
+    chartCols.push({val:val,chk:chk,bar:bar,dot:dot});
+    chartDows.push(dow);
+  }
+}
+function renderWeek(){
+  var data=weekData();
+  $('todayProg').textContent='วันนี้ '+data.todayMinutes+'/'+settings.goalMinutes+' นาที';
+  var pct=(settings.goalMinutes>0)?Math.min(100,Math.round(data.todayMinutes/settings.goalMinutes*100)):0;
+  var fill=$('progressFill');
+  fill.style.width=pct+'%';
+  fill.classList.toggle('met',data.todayMinutes>=settings.goalMinutes);
+
+  var scale=Math.max(settings.goalMinutes,data.maxMinutes,1);
+  var goalPx=Math.round(settings.goalMinutes/scale*BAR_MAX);
+  $('goalLine').style.bottom=goalPx+'px';
+  $('goalLabel').textContent='เป้า '+settings.goalMinutes+' นาที';
+  $('goalLabel').style.bottom=clamp(goalPx-9,0,CHART_H-18)+'px';
+
+  for(var i=0;i<7;i++){
+    var day=data.days[i];
+    var c=chartCols[i];
+    var m=day.minutes;
+    var barPx=(m>0)?Math.max(2,Math.round(m/scale*BAR_MAX)):0;
+    c.bar.style.height=barPx+'px';
+    c.bar.style.display=(m>0)?'block':'none';
+    c.bar.classList.toggle('is-today',i===6);
+    c.dot.style.display=(m>0)?'none':'block';
+    c.dot.classList.toggle('is-today',i===6);
+    c.val.textContent=String(m);
+    c.val.style.bottom=((barPx>0?barPx:8)+10)+'px';
+    vis(c.chk,m>=settings.goalMinutes);
+    c.chk.style.bottom=(barPx+28)+'px';
+    var dow=chartDows[i];
+    dow.textContent=DOW[day.date.getDay()];
+    dow.classList.toggle('is-today',i===6);
+  }
+  $('weekSummary').textContent='รวม '+data.totalMinutes+' นาที · ซ้อมติดกัน '+data.streak+' วัน';
+  renderWeekTable(data);
+}
+function renderWeekTable(data){
+  var body=$('weekTable').getElementsByTagName('tbody')[0];
+  body.textContent='';
+  for(var i=0;i<7;i++){
+    var tr=document.createElement('tr');
+    var th=document.createElement('th');
+    th.scope='row';
+    th.textContent=(i===6?'วันนี้ ':'')+DOW[data.days[i].date.getDay()]+'.';
+    var td=document.createElement('td');
+    td.textContent=data.days[i].minutes+' นาที';
+    tr.appendChild(th);
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+}
+
+/* ---------- รายการบันทึก ---------- */
+function renderLog(){
+  var list=$('logList');
+  list.textContent='';
+  var items=entries.slice(0,30);
+  vis($('logEmpty'),items.length===0);
+  vis(list,items.length>0);
+  if(!items.length) return;
+
+  var today=startOfDay(new Date());
+  var todayKey=dayKey(today);
+  var yestKey=dayKey(addDays(today,-1));
+  var currentKey=null;
+  var group=null;
+  for(var i=0;i<items.length;i++){
+    var e=items[i];
+    var d=parseDate(e.endedAt);
+    if(!d) continue;
+    var k=dayKey(d);
+    if(k!==currentKey){
+      currentKey=k;
+      var h=document.createElement('h3');
+      h.className='log-day';
+      h.textContent=(k===todayKey)?'วันนี้':((k===yestKey)?'เมื่อวาน':thaiDate(d));
+      list.appendChild(h);
+      group=document.createElement('div');
+      group.className='entries';
+      list.appendChild(group);
+    }
+    group.appendChild(buildEntryRow(e,d));
+  }
+}
+function buildEntryRow(e,d){
+  var row=document.createElement('div');
+  row.className='entry';
+
+  var main=document.createElement('div');
+  main.className='entry-main';
+  var line=document.createElement('div');
+  line.className='entry-line';
+  var dur=document.createElement('span');
+  dur.className='entry-dur';
+  dur.textContent=durationText(e.seconds);
+  var lab=document.createElement('span');
+  lab.className='entry-label';
+  lab.textContent=e.label;
+  var time=document.createElement('span');
+  time.className='entry-time';
+  time.textContent=timeOfDay(d);
+  line.appendChild(dur);
+  line.appendChild(lab);
+  line.appendChild(time);
+  main.appendChild(line);
+  if(e.note){
+    var note=document.createElement('p');
+    note.className='entry-note';
+    note.textContent=e.note;
+    main.appendChild(note);
+  }
+
+  var del=document.createElement('button');
+  del.type='button';
+  del.className='btn secondary del';
+  del.textContent='ลบ';
+  var armed=false;
+  var timer=0;
+  del.addEventListener('click',function(){
+    if(!armed){
+      armed=true;
+      del.textContent='ยืนยันลบ';
+      del.classList.add('is-armed');
+      timer=setTimeout(function(){
+        armed=false;
+        del.textContent='ลบ';
+        del.classList.remove('is-armed');
+      },4000);
+    }else{
+      clearTimeout(timer);
+      entries=entries.filter(function(x){return x.id!==e.id;});
+      saveEntries();
+      if(state==='saving') renderChips();
+      renderWeek();
+      renderLog();
+    }
+  });
+
+  row.appendChild(main);
+  row.appendChild(del);
+  return row;
+}
+
+/* ---------- บันทึกและโหลดข้อมูล ---------- */
+function sanitizeEntry(raw){
+  if(!raw||typeof raw!=='object') return null;
+  var id=(typeof raw.id==='string'&&raw.id.length>0)?raw.id:null;
+  if(!id) return null;
+  var d=parseDate(raw.endedAt);
+  if(!d) return null;
+  var sec=Number(raw.seconds);
+  if(!isFinite(sec)||sec<0) sec=0;
+  var label=(typeof raw.label==='string')?raw.label.trim().slice(0,60):'';
+  if(!label) return null;
+  var note=(typeof raw.note==='string')?raw.note.trim().slice(0,200):'';
+  return {
+    id:id,
+    endedAt:new Date(d.getTime()).toISOString(),
+    seconds:Math.round(sec),
+    label:label,
+    note:note
+  };
+}
+function normalizeEntries(raw){
+  if(!Array.isArray(raw)) return [];
+  var seen=Object.create(null);
+  var out=[];
+  for(var i=0;i<raw.length;i++){
+    var e=sanitizeEntry(raw[i]);
+    if(!e) continue;
+    if(seen[e.id]) continue;
+    seen[e.id]=true;
+    out.push(e);
+  }
+  out.sort(function(a,b){
+    return new Date(b.endedAt).getTime()-new Date(a.endedAt).getTime();
+  });
+  return out.slice(0,MAX_ENTRIES);
+}
+function loadEntries(){
+  entries=normalizeEntries(readJSON(KEY_ENTRIES,[]));
+}
+function saveEntries(){
+  storage.set(KEY_ENTRIES,JSON.stringify(entries));
+}
+function loadSettings(){
+  var raw=readJSON(KEY_SETTINGS,null);
+  var goal=30;
+  var wake=false;
+  if(raw&&typeof raw==='object'){
+    var n=Number(raw.goalMinutes);
+    if(isFinite(n)&&n>0) goal=clamp(Math.round(n/5)*5,GOAL_MIN,GOAL_MAX);
+    wake=(raw.wakeLock===true);
+  }
+  settings={goalMinutes:goal,wakeLock:wake};
+  renderSettings();
+}
+function saveSettings(){
+  storage.set(KEY_SETTINGS,JSON.stringify(settings));
+}
+function renderSettings(){
+  var gi=$('goalInput');
+  if(document.activeElement!==gi) gi.value=String(settings.goalMinutes);
+  $('wakeInput').checked=!!settings.wakeLock;
+}
+
+/* ---------- ตั้งค่า: เป้าหมายและ wake lock ---------- */
+function commitGoal(v){
+  var n=Number(v);
+  if(v===''||!isFinite(n)) n=settings.goalMinutes;
+  n=clamp(Math.round(n/5)*5,GOAL_MIN,GOAL_MAX);
+  settings.goalMinutes=n;
+  saveSettings();
+  $('goalInput').value=String(n);
+  renderWeek();
+}
+function onWakeChange(){
+  settings.wakeLock=$('wakeInput').checked;
+  saveSettings();
+  if(settings.wakeLock&&state==='running') requestWake();
+  else releaseWake();
+}
+
+/* ---------- คัดลอกข้อความ ---------- */
+function copyToClipboard(txt){
+  var settled=false;
+  function success(){
+    if(settled) return;
+    settled=true;
+    toast('คัดลอกแล้ว');
+  }
+  function failure(){
+    if(settled) return;
+    if(fallbackCopy(txt)){success();return;}
+    settled=true;
+    showCopyFallback(txt);
+  }
+  if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+    try{
+      navigator.clipboard.writeText(txt).then(success,failure);
+      return;
+    }catch(e){}
+  }
+  if(fallbackCopy(txt)) success();
+  else failure();
+}
+function fallbackCopy(txt){
+  var ta=document.createElement('textarea');
+  ta.value=txt;
+  ta.setAttribute('readonly','');
+  ta.style.position='fixed';
+  ta.style.top='0';
+  ta.style.left='-9999px';
+  ta.style.opacity='0';
+  document.body.appendChild(ta);
+  var ok=false;
+  try{
+    ta.select();
+    if(ta.setSelectionRange) ta.setSelectionRange(0,txt.length);
+    ok=document.execCommand('copy');
+  }catch(e){ok=false;}
+  document.body.removeChild(ta);
+  return ok;
+}
+function showCopyFallback(txt){
+  clearTimeout(toastTimer);
+  $('toast').classList.remove('show');
+  var wrap=$('copyFallbackWrap');
+  var area=$('copyFallback');
+  area.value=txt;
+  vis(wrap,true);
+  try{area.focus();area.select();}catch(e){}
+}
+function summaryText(){
+  var data=weekData();
+  var lines=['สรุปการซ้อม 7 วันล่าสุด'];
+  for(var i=0;i<7;i++){
+    lines.push(DOW[data.days[i].date.getDay()]+'.: '+data.days[i].minutes+' นาที');
+  }
+  lines.push('รวม '+data.totalMinutes+' นาที · ซ้อมติดกัน '+data.streak+' วัน · เป้า '+settings.goalMinutes+' นาที/วัน');
+  return lines.join('\n');
+}
+function backupText(){
+  return JSON.stringify({
+    entries:entries,
+    settings:{goalMinutes:settings.goalMinutes,wakeLock:settings.wakeLock}
+  },null,2);
+}
+
+/* ---------- นำเข้าข้อมูลสำรอง ---------- */
+function importBackup(){
+  var txt=$('importArea').value;
+  var data;
+  try{data=JSON.parse(txt);}catch(e){data=null;}
+  if(!data||typeof data!=='object'||!Array.isArray(data.entries)){
+    $('importMsg').textContent='ข้อมูลไม่ถูกต้อง ลองคัดลอกใหม่';
+    return;
+  }
+  var known=Object.create(null);
+  var i;
+  for(i=0;i<entries.length;i++) known[entries[i].id]=true;
+  var incoming=[];
+  for(i=0;i<data.entries.length;i++){
+    var e=sanitizeEntry(data.entries[i]);
+    if(!e||known[e.id]) continue;
+    known[e.id]=true;
+    incoming.push(e);
+  }
+  entries=normalizeEntries(entries.concat(incoming));
+  saveEntries();
+
+  if(data.settings&&typeof data.settings==='object'){
+    var changed=false;
+    var g=Number(data.settings.goalMinutes);
+    if(isFinite(g)&&g>0){
+      settings.goalMinutes=clamp(Math.round(g/5)*5,GOAL_MIN,GOAL_MAX);
+      changed=true;
+    }
+    if(typeof data.settings.wakeLock==='boolean'){
+      settings.wakeLock=data.settings.wakeLock;
+      changed=true;
+    }
+    if(changed){
+      saveSettings();
+      renderSettings();
+    }
+  }
+
+  $('importMsg').textContent='นำเข้า '+incoming.length+' รายการ';
+  $('importArea').value='';
+  if(state==='saving') renderChips();
+  renderWeek();
+  renderLog();
+}
+
+/* ---------- ล้างข้อมูลทั้งหมด ---------- */
+var clearTimer=0;
+var clearArmed=false;
+function resetClearButton(){
+  var b=$('btnClear');
+  clearTimeout(clearTimer);
+  clearTimer=0;
+  clearArmed=false;
+  b.textContent='ล้างข้อมูลทั้งหมด';
+  b.classList.remove('is-armed');
+}
+function armClear(){
+  var b=$('btnClear');
+  if(clearArmed){
+    resetClearButton();
+    entries=[];
+    saveEntries();
+    resetTimer();
+    $('importMsg').textContent='';
+    renderWeek();
+    renderLog();
+    return;
+  }
+  clearArmed=true;
+  b.textContent='ยืนยันล้างทั้งหมด';
+  b.classList.add('is-armed');
+  clearTimeout(clearTimer);
+  clearTimer=setTimeout(resetClearButton,4000);
+}
+
+/* ---------- อ่านค่าจากพื้นที่เก็บเมื่อแท็บกลับมา ---------- */
+function reloadFromStorage(){
+  loadEntries();
+  loadSettings();
+  if(state==='saving') renderChips();
+  renderWeek();
+  renderLog();
+}
+
+/* ---------- ผูกเหตุการณ์ทั้งหมด ---------- */
+function bindEvents(){
+  $('btnStart').addEventListener('click',startTimer);
+  $('btnPause').addEventListener('click',pauseTimer);
+  $('btnResume').addEventListener('click',resumeTimer);
+  $('btnStop').addEventListener('click',stopTimer);
+  $('btnRestoreKeep').addEventListener('click',function(){
+    hideRestore();
+    renderTimer();
+  });
+  $('btnRestoreStop').addEventListener('click',function(){
+    hideRestore();
+    stopTimer();
+  });
+
+  $('labelInput').addEventListener('input',updateSaveState);
+  $('btnSave').addEventListener('click',saveEntry);
+  $('btnDiscard').addEventListener('click',armDiscard);
+  $('btnGoalMinus').addEventListener('click',function(){commitGoal(settings.goalMinutes-5);});
+  $('btnGoalPlus').addEventListener('click',function(){commitGoal(settings.goalMinutes+5);});
+  $('goalInput').addEventListener('input',function(){
+    var raw=$('goalInput').value;
+    if(raw==='') return;
+    var n=Number(raw);
+    if(!isFinite(n)) return;
+    n=clamp(Math.round(n),GOAL_MIN,GOAL_MAX);
+    if(n!==settings.goalMinutes){
+      settings.goalMinutes=n;
+      saveSettings();
+      renderWeek();
+    }
+  });
+  $('goalInput').addEventListener('change',function(){commitGoal($('goalInput').value);});
+  $('wakeInput').addEventListener('change',onWakeChange);
+
+  $('btnCopySummary').addEventListener('click',function(){copyToClipboard(summaryText());});
+  $('btnCopyBackup').addEventListener('click',function(){copyToClipboard(backupText());});
+  $('btnImport').addEventListener('click',importBackup);
+  $('btnClear').addEventListener('click',armClear);
+
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){
+      releaseWake();
+      return;
+    }
+    reloadFromStorage();
+    renderTimer();
+    if(state==='running'){
+      startTick();
+      requestWake();
+    }
+  });
+  window.addEventListener('storage',function(ev){
+    if(ev.key===null||ev.key===KEY_ENTRIES||ev.key===KEY_SETTINGS){
+      reloadFromStorage();
+    }
+  });
+}
+
+/* ---------- กู้สถานะตัวจับเวลาตอนเปิดหน้า ---------- */
+function initTimer(){
+  var raw=readJSON(KEY_TIMER,null);
+  if(!raw||typeof raw!=='object') return;
+  var st=raw.state;
+  var acc=Number(raw.accumulatedMs);
+  var started=Number(raw.startedAtMs);
+  if(!isFinite(acc)||acc<0) acc=0;
+  if(!isFinite(started)||started<0) started=0;
+
+  if(st==='paused'){
+    state='paused';
+    accumulatedMs=acc;
+    startedAtMs=0;
+    lastElapsedMs=acc;
+  }else if(st==='saving'){
+    state='saving';
+    accumulatedMs=acc;
+    startedAtMs=0;
+    lastElapsedMs=acc;
+    openSheet();
+  }else if(st==='running'){
+    var now=Date.now();
+    var stale=(started>0&&(now-started)>MAX_RESTORE_SECONDS*1000);
+    state='running';
+    accumulatedMs=acc;
+    startedAtMs=(started>0?started:now);
+    lastElapsedMs=acc;
+    if(stale){
+      accumulatedMs=MAX_RESTORE_SECONDS*1000;
+      startedAtMs=now;
+      lastElapsedMs=accumulatedMs;
+    }
+    saveTimer();
+    startTick();
+    showRestore(stale);
+    renderTimer();
+    requestWake();
+    return;
+  }
+  renderTimer();
+}
+
+/* ---------- เริ่มต้นแอป ---------- */
+loadEntries();
+loadSettings();
+if(!storage.ok) vis($('storageNote'),true);
+if(!wakeSupported()) vis($('wakeRow'),false);
+buildChart();
+renderSettings();
+bindEvents();
+initTimer();
+renderWeek();
+renderLog();
+renderTimer();
+
+/* ตรวจวันใหม่และเลื่อนกราฟทุกนาทีขณะหน้าแสดงอยู่ */
+setInterval(function(){
+  if(document.hidden) return;
+  renderWeek();
+  renderLog();
+},60000);
+
+})();
+</script>
+</body>
+</html>
